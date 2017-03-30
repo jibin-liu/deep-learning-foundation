@@ -14,7 +14,7 @@ def sigmoid_prime(x):
     # this is just for understanding purpose.
     # when doing calculations, sigmoid will be pre-calculated, and then used
     # to calculate sigmoid_prime. This is faster than calling this func.
-    return sigmoid(x) / (1 - sigmoid(x))
+    return sigmoid(x) * (1 - sigmoid(x))
 
 
 # set seeds
@@ -46,7 +46,7 @@ for e in range(epochs):
     nn_output = sigmoid(h)  # shape (360, )
 
     # calculate error term
-    error_term = (y - nn_output) * (nn_output / (1 - nn_output))  # shape (360,)
+    error_term = (y - nn_output) * nn_output * (1 - nn_output)  # shape (360,)
 
     # calculate del_w
     del_w = np.dot(error_term, x)  # shape (6, )
