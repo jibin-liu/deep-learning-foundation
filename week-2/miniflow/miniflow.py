@@ -3,6 +3,7 @@ Implement the miniflow architecture of neural network
 
 By Jibin Liu
 """
+from functools import reduce
 
 
 class Node(object):
@@ -55,12 +56,23 @@ class Input(Node):
 class Add(Node):
     """ The Add class is for nodes that do addition math. """
 
-    def __init__(self, x, y):
-        super(Add, self).__init__([x, y])
+    def __init__(self, *args):
+        super(Add, self).__init__(list(args))
 
     def forward(self):
         """ Add nodes will add the value of inbound_nodes """
         self.value = sum([n.value for n in self.inbound_nodes])
+
+
+class Mul(Node):
+    """ The Mul class is for nodes that do multiplication """
+
+    def __init__(self, *args):
+        super(Mul, self).__init__(list(args))
+
+    def forward(self):
+        """ Mul nodes will multiply the values of inbound_nodes """
+        self.value = reduce(lambda x, y: x * y, [n.value for n in self.inbound_nodes])
 
 
 # ---------- helpler functions -------------
