@@ -2,7 +2,10 @@
 use miniflow to calculate the Addition of two nodes
 """
 
-from miniflow import Input, Add, Mul, Linear, Sigmoid, topological_sort, forward_pass
+# import Nodes classes
+from miniflow import Input, Add, Mul, Linear, Sigmoid, MSE
+# import helpler functions
+from miniflow import topological_sort, forward_pass
 import numpy as np
 
 
@@ -68,7 +71,27 @@ def calculate_linear_with_sigmoid():
     print(output)
 
 
+def test_MSE():
+    """ this part is just for testing the implementation of MSE """
+
+    # set Inputs
+    y, a = Input(), Input()
+
+    y_ = np.array([1, 2, 3])
+    a_ = np.array([4.5, 5, 10])
+    feed_dict = {y: y_, a: a_}
+
+    # set MSE node
+    cost = MSE(y, a)
+
+    # sort the node and calculate cost
+    graph = topological_sort(feed_dict)
+    forward_pass(cost, graph)
+    print(cost.value)
+
+
 if __name__ == '__main__':
     calculate_add()
     calculate_linear()
     calculate_linear_with_sigmoid()
+    test_MSE()

@@ -104,6 +104,25 @@ class Sigmoid(Node):
         return self.sigmoid * (1. - self.sigmoid)
 
 
+class MSE(Node):
+    """ represents a virtual node that calculates the cost/loss """
+
+    def __init__(self, expected, calculated):
+        super(MSE, self).__init__([expected, calculated])
+
+    def forward(self):
+        # the reshape is used to avoid possible broadcast error
+
+        # for example, subtracting a matrice of (3, ) from (3, 1) will result
+        # a shape of (3, 3), while what we want is actually (3, 1)
+
+        # the calculated result "a" usually in shape (n, 1), while the expected
+        # result is in shape (n, )
+
+        expected, calculated = [n.value.reshape(-1, 1) for n in self.inbound_nodes]
+        self.value = np.square(expected - calculated).sum() / len(expected)
+
+
 # ---------- helpler functions -------------
 
 def topological_sort(feed_dict):
