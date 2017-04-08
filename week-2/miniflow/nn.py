@@ -2,7 +2,8 @@
 use miniflow to calculate the Addition of two nodes
 """
 
-from miniflow import Input, Add, Mul, Linear, topological_sort, forward_pass
+from miniflow import Input, Add, Mul, Linear, Sigmoid, topological_sort, forward_pass
+import numpy as np
 
 
 def calculate_add():
@@ -48,6 +49,26 @@ def calculate_linear():
     print(output)
 
 
+def calculate_linear_with_sigmoid():
+    # set Input nodes and the feed_dict
+    X, W, b = Input(), Input(), Input()
+    X_ = np.array([[-1., -2.], [-1, -2]])
+    W_ = np.array([[2., -3], [2., -3]])
+    b_ = np.array([-3., -5])
+
+    feed_dict = {X: X_, W: W_, b: b_}
+
+    # create Linear node
+    f = Linear(X, W, b)
+    g = Sigmoid(f)
+
+    # sort the node and do forward pass
+    graph = topological_sort(feed_dict)
+    output = forward_pass(g, graph)
+    print(output)
+
+
 if __name__ == '__main__':
     calculate_add()
     calculate_linear()
+    calculate_linear_with_sigmoid()

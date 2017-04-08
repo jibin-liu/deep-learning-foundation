@@ -87,6 +87,23 @@ class Linear(Node):
         self.value = np.dot(inputs, weights) + bias
 
 
+class Sigmoid(Node):
+    """ represents a node that used as a sigmoid activation gate """
+
+    def __init__(self, node):
+        super(Sigmoid, self).__init__([node])
+
+    def forward(self):
+        self.value = self._sigmoid_func(self.inbound_nodes[0].value)
+
+    def _sigmoid_func(self, x):
+        self._sigmoid = 1. / (1. + np.exp(-x))  # 1. make sure it's float
+        return self._sigmoid
+
+    def _sigmoid_prime(self):
+        return self.sigmoid * (1. - self.sigmoid)
+
+
 # ---------- helpler functions -------------
 
 def topological_sort(feed_dict):
