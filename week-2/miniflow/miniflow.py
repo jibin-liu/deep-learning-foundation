@@ -4,6 +4,7 @@ Implement the miniflow architecture of neural network
 By Jibin Liu
 """
 from functools import reduce
+import numpy as np
 
 
 class Node(object):
@@ -73,6 +74,17 @@ class Mul(Node):
     def forward(self):
         """ Mul nodes will multiply the values of inbound_nodes """
         self.value = reduce(lambda x, y: x * y, [n.value for n in self.inbound_nodes])
+
+
+class Linear(Node):
+    """ The Linear class is for linear combination """
+
+    def __init__(self, x, w, b):
+        super(Linear, self).__init__([x, w, b])
+
+    def forward(self):
+        inputs, weights, bias = [n.value for n in self.inbound_nodes]
+        self.value = np.dot(inputs, weights) + bias
 
 
 # ---------- helpler functions -------------
