@@ -22,6 +22,10 @@ class Node(object):
         self.outbound_nodes = []
         self.value = None
 
+        # the key in self.gradients is the inbound_nodes,
+        # the value is the partials of this node with respect to that inbound_node.
+        self.gradients = {}
+
         # add current node as outbound node for all of its inbound nodes
         for n in self.inbound_nodes:
             n.outbound_nodes.append(self)
@@ -33,7 +37,17 @@ class Node(object):
         use the value from inbound nodes to calculate the output value. Actual
         forward method should be implemented in subclasses.
         """
-        raise NotImplemented
+        raise NotImplementedError
+
+    def backward(self):
+        """
+        backward propagation.
+
+        Use the gradient from outbound_nodes, and the derivative of this node
+        with respect to its inbound_node, to calculate the gradient loss for
+        its inbound_nodes.
+        """
+        raise NotImplementedError
 
 
 class Input(Node):
@@ -53,6 +67,15 @@ class Input(Node):
         if value:
             self.value = value
 
+    def backward(self):
+        """ Input node has not inputs, so the derivative is zero """
+        self.gradients = {self: 0}
+
+        # for weights and bias, we need to sum up the grad_cost from outbound_nodes
+        for node in self.outbound_nodes:
+            grad_cost = node.gradients[self]
+            self.gradients[self] += grad_cost
+
 
 class Add(Node):
     """ The Add class is for nodes that do addition math. """
@@ -63,6 +86,16 @@ class Add(Node):
     def forward(self):
         """ Add nodes will add the value of inbound_nodes """
         self.value = sum([n.value for n in self.inbound_nodes])
+
+    def backward(self):
+        """ for Add node, the derivative with respect to its inputs is 1 """
+        self.gradients = {n: np.zeros_like(n.value) for n in self.inbound_nodes}
+
+        for node in self.outbound_nodes:
+            grad_cost = node.gradients[self]
+
+            for in_node in self.gradients:
+                self.gradients[in_node] += grad_cost * 1
 
 
 class Mul(Node):
@@ -75,6 +108,24 @@ class Mul(Node):
         """ Mul nodes will multiply the values of inbound_nodes """
         self.value = reduce(lambda x, y: x * y, [n.value for n in self.inbound_nodes])
 
+    def backward(self):
+        self.gradients = {n: np.zeros_like(n.value) for n in self.inbound_nodes}
+
+        for node in self.outbound_nodes:
+            grad_cost = node.gradients[self]
+
+            # the derivative of multiplication function with respect to an input
+            # is the multiplication of all other input nodes.
+            for in_node in self.inbound_nodes:
+                self.gradients[in_node] += grad_cost * self.derivative(in_node)
+
+    def derivative(self, node):
+        """
+        return the derivative of this Mul node with respect to the input node
+        """
+        other_nodes = [n.value for n in self.inbound_nodes if n is not node]
+        return reduce(lambda x, y: x * y, other_nodes)
+
 
 class Linear(Node):
     """ The Linear class is for linear combination """
@@ -86,6 +137,19 @@ class Linear(Node):
         inputs, weights, bias = [n.value for n in self.inbound_nodes]
         self.value = np.dot(inputs, weights) + bias
 
+    def backward(self):
+        self.gradients = {n: np.zeros_like(n.value) for n in self.inbound_nodes}
+
+        # sum grad_cost from each outbound_nodes to each input nodes.
+        for node in self.outbound_nodes:
+            grad_cost = node.gradients[self]
+            inputs, weights, bias = self.inbound_nodes
+
+            self.gradients[inputs] += np.dot(grad_cost, weights.value.T)
+            self.gradients[weights] += np.dot(inputs.value.T, grad_cost)
+            # not quite understand the following line, why need sum?
+            self.gradients[bias] += np.sum(grad_cost, axis=0, keepdims=False)
+
 
 class Sigmoid(Node):
     """ represents a node that used as a sigmoid activation gate """
@@ -96,12 +160,21 @@ class Sigmoid(Node):
     def forward(self):
         self.value = self._sigmoid_func(self.inbound_nodes[0].value)
 
+    def backward(self):
+        self.gradients = {n: np.zeros_like(n.value) for n in self.inbound_nodes}
+
+        for node in self.outbound_nodes:
+            grad_cost = node.gradients[self]
+            # self._sigmoid has been calcuated during forward propagation
+            inputs = self.inbound_nodes[0]
+            self.gradients[inputs] += grad_cost * self._sigmoid_prime()
+
     def _sigmoid_func(self, x):
         self._sigmoid = 1. / (1. + np.exp(-x))  # 1. make sure it's float
         return self._sigmoid
 
     def _sigmoid_prime(self):
-        return self.sigmoid * (1. - self.sigmoid)
+        return self._sigmoid * (1. - self._sigmoid)
 
 
 class MSE(Node):
@@ -121,6 +194,15 @@ class MSE(Node):
 
         expected, calculated = [n.value.reshape(-1, 1) for n in self.inbound_nodes]
         self.value = np.square(expected - calculated).sum() / len(expected)
+
+        # save m and (y-a) for backward calculation
+        self.m = len(expected)
+        self.diff = expected - calculated
+
+    def backward(self):
+        # calculate derivative of MSE node with respect to calculated value
+        self.gradients[self.inbound_nodes[0]] = (2 / self.m) * self.diff
+        self.gradients[self.inbound_nodes[1]] = (-2 / self.m) * self.diff
 
 
 # ---------- helpler functions -------------
@@ -182,3 +264,15 @@ def forward_pass(output_node, sorted_nodes):
         node.forward()
 
     return output_node.value
+
+
+def forward_and_backward(sorted_nodes):
+    """
+    do a forward pass and a backward pass using the sorted list of nodes
+    """
+    for node in sorted_nodes:
+        node.forward()
+
+    for node in reversed(sorted_nodes):
+        # another way to call reversed iteration on a list is [::-1]
+        node.backward()
