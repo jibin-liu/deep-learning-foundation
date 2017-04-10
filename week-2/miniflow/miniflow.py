@@ -72,6 +72,8 @@ class Input(Node):
         self.gradients = {self: 0}
 
         # for weights and bias, we need to sum up the grad_cost from outbound_nodes
+        # this can also be helpful to access the total grad_cost for Input nodes
+        # see usage in sgd_update
         for node in self.outbound_nodes:
             grad_cost = node.gradients[self]
             self.gradients[self] += grad_cost
@@ -276,3 +278,15 @@ def forward_and_backward(sorted_nodes):
     for node in reversed(sorted_nodes):
         # another way to call reversed iteration on a list is [::-1]
         node.backward()
+
+
+def sgd_update(trainables, learning_rate=1e-2):
+    """
+    update the trainables using grad_cost from their outbound_nodes.
+
+    @trainables: a list of nodes whose value should be updated.
+    @learning_rate: learning rate for neural network
+    """
+    for node in trainables:
+        grad_cost = node.gradients[node]
+        node.value -= learning_rate * grad_cost

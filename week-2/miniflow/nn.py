@@ -5,8 +5,10 @@ use miniflow to calculate the Addition of two nodes
 # import Nodes classes
 from miniflow import Input, Add, Mul, Linear, Sigmoid, MSE
 # import helpler functions
-from miniflow import topological_sort, forward_pass, forward_and_backward
+from miniflow import topological_sort, forward_pass, forward_and_backward, sgd_update
 import numpy as np
+from sklearn.datasets import load_boston
+from sklearn.utils import shuffle, resample
 
 
 def calculate_add():
@@ -125,9 +127,81 @@ def test_forward_and_backward():
     print(gradients)
 
 
+def test_sgd_update():
+    """
+    using Boston housing price data to test sgd update and also the whole
+    performance of miniflow
+    """
+    # load data
+    data = load_boston()
+    X_ = data['data']
+    y_ = data['target']
+
+    # normalize data
+    X_ = (X_ - np.mean(X_, axis=0)) / np.std(X_, axis=0)
+
+    n_features = X_.shape[1]
+    n_hidden = 10
+    W1_ = np.random.randn(n_features, n_hidden)
+    b1_ = np.zeros(n_hidden)
+    W2_ = np.random.randn(n_hidden, 1)
+    b2_ = np.zeros(1)
+
+    # Setup Neural Network
+    X, y = Input(), Input()
+    W1, W2, b1, b2 = Input(), Input(), Input(), Input()
+
+    l1 = Linear(X, W1, b1)
+    s = Sigmoid(l1)
+    l2 = Linear(s, W2, b2)
+    cost = MSE(y, l2)
+
+    feed_dict = {
+        X: X_,
+        y: y_,
+        W1: W1_,
+        b1: b1_,
+        W2: W2_,
+        b2: b2_
+    }
+
+    # Set hypoparameters
+    epochs = 1000
+
+    # Set batch size
+    m = X_.shape[0]
+    batch_size = 11
+    steps_per_epoch = m // batch_size
+
+    graph = topological_sort(feed_dict)
+    trainables = [W1, b1, W2, b2]
+
+    print("Total number of examples = {}".format(m))
+
+    for e in range(epochs):
+        loss = 0
+        for j in range(steps_per_epoch):
+            # steps 1: select a batch of data randomly
+            X_batch, y_batch = resample(X_, y_, n_samples=batch_size)
+            X.value = X_batch
+            y.value = y_batch
+
+            # step 2: forward and backward propagation
+            forward_and_backward(graph)
+
+            # step 3: SGD update
+            sgd_update(trainables)
+            loss += graph[-1].value
+
+            # step 4: repeat 1-3 for next epoch.
+
+        print("Epoch: {}, Loss: {:.3f}".format(e + 1, loss / steps_per_epoch))
+
+
 if __name__ == '__main__':
     calculate_add()
     calculate_linear()
     calculate_linear_with_sigmoid()
     test_MSE()
     test_forward_and_backward()
+    test_sgd_update()
