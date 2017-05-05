@@ -4,3 +4,6 @@
 *.zip
 *.gz
 *.pickle
+*.floydexpt
+*.floydignore
+
