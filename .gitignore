@@ -7,4 +7,5 @@
 *.floydexpt
 *.floydignore
 checkpoints/
+*.p
 
