@@ -1,0 +1,1 @@
+floyd run --mode jupyter --data R5KrjnANiKVhLWAkpXhNBe:/input --gpu tensorflow=1.1
